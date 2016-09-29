@@ -7,8 +7,17 @@
         "files": {}
     },
     "installed_plugins": {
-        "com.cordova.plugins.sms": {
-            "PACKAGE_NAME": "com.phonegap.root"
+        "cordova-plugin-console": {
+            "PACKAGE_NAME": "com.startapplabs.facebook-login"
+        },
+        "cordova-plugin-device": {
+            "PACKAGE_NAME": "com.startapplabs.facebook-login"
+        },
+        "cordova-plugin-whitelist": {
+            "PACKAGE_NAME": "com.startapplabs.facebook-login"
+        },
+        "cordova-plugin-splashscreen": {
+            "PACKAGE_NAME": "com.startapplabs.facebook-login"
         }
     },
     "dependent_plugins": {}

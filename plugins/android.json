@@ -7,22 +7,18 @@
         "files": {}
     },
     "installed_plugins": {
-        "cordova-plugin-inappbrowser": {
-            "PACKAGE_NAME": "com.phonegap.root"
+        "cordova-plugin-console": {
+            "PACKAGE_NAME": "com.startapplabs.ankush"
+        },
+        "cordova-plugin-device": {
+            "PACKAGE_NAME": "com.startapplabs.ankush"
         },
         "cordova-plugin-whitelist": {
-            "PACKAGE_NAME": "com.phonegap.root"
+            "PACKAGE_NAME": "com.startapplabs.ankush"
         },
-        "cordova-plugin-contacts": {
-            "PACKAGE_NAME": "com.phonegap.root"
-        },
-        "com.cordova.plugins.sms": {
-            "PACKAGE_NAME": "com.phonegap.root"
+        "cordova-plugin-splashscreen": {
+            "PACKAGE_NAME": "com.startapplabs.ankush"
         }
     },
-    "dependent_plugins": {
-        "cordova-plugin-compat": {
-            "PACKAGE_NAME": "com.phonegap.root"
-        }
-    }
+    "dependent_plugins": {}
 }

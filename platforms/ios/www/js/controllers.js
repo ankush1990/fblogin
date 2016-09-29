@@ -1,459 +1,148 @@
-var global_login_id = "";
-var contact_detail_data = [];
+angular.module('controllers', [])
 
-angular.module('starter.controllers', ['ngOpenFB'])
+.controller('WelcomeCtrl', function($scope, $state, $q, UserService, $ionicLoading) {
 
-.controller('AppCtrl', function($scope, $ionicModal, $timeout) {
+  //This is the success callback from the login method
+  var fbLoginSuccess = function(response) {
+    if (!response.authResponse){
+      fbLoginError("Cannot find the authResponse");
+      return;
+    }
 
-	// With the new view caching in Ionic, Controllers are only called
-	// when they are recreated or on app start, instead of every page change.
-	// To listen for when this page is active (for example, to refresh data),
-	// listen for the $ionicView.enter event:
-	//$scope.$on('$ionicView.enter', function(e) {
-	//});
-	
-	// Form data for the login modal
-	$scope.loginData = {};
-	
-	// Create the login modal that we will use later
-	$ionicModal.fromTemplateUrl('templates/login.html', {
-		scope: $scope
-		}).then(function(modal) {
-		$scope.modal = modal;
-	});
-	
-	// Triggered in the login modal to close it
-	$scope.closeLogin = function() {
-		$scope.modal.hide();
-	};
-	
-	// Open the login modal
-	$scope.login = function() {
-		$scope.modal.show();
-	};
-	
-	// Perform the login action when the user submits the login form
-	$scope.doLogin = function() {
-	console.log('Doing login', $scope.loginData);
-	
-	// Simulate a login delay. Remove this and replace with your login
-	// code if using a login system
-	$timeout(function() {
-	  	$scope.closeLogin();
-		}, 1000);
-	};
-})
+    var authResponse = response.authResponse;
 
+    getFacebookProfileInfo(authResponse)
+    .then(function(profileInfo) {
+      //for the purpose of this example I will store user data on local storage
+      UserService.setUser({
+        authResponse: authResponse,
+				userID: profileInfo.id,
+				name: profileInfo.name,
+				email: profileInfo.email,
+        picture : "http://graph.facebook.com/" + authResponse.userID + "/picture?type=large"
+      });
 
-.controller('LogoutCtrl', function($scope,$rootScope,$ionicHistory) {
-	$scope.login = "";
-	
-	$rootScope.$on('login_var', function (event, args) {
-		$scope.login = args.global_login;
-		global_login_id = args.global_login;
-	});
-	
-	$scope.logout = function(){
-		$ionicHistory.clearCache();
-		login_var = "";
-		$rootScope.$broadcast('login_var',{global_login:login_var});
-	}
-})
+      $ionicLoading.hide();
+      $state.go('app.home');
 
-
-
-.controller('dashboardCtrl', function($scope,ngFB) {
-	
-	ngFB.api({
-        path: '/me',
-        params: {fields: 'id,name,email'}
-    }).then(
-	function (user) {
-		$scope.user = user;
-	},
-	function (error) {
-		alert('Facebook error: ' + error.error_description);
-	});
-})
-
-
-.controller('edit_contact', function($scope,$state,$http,$stateParams,$ionicPopup,$ionicLoading,$rootScope) {
-	$scope.user = {name : $stateParams.contact_name,number : $stateParams.contact_number};
-	
-	//update contact details
-	$scope.update_contact = function(user) {
-		var name = user.name;
-		var number = user.number;
-		
-		
-		if(typeof name === "undefined" || typeof number === "undefined" || name == "" || number == ""){
-			$ionicPopup.show({
-			  template: '',
-			  title: 'Please fill all fields',
-			  scope: $scope,
-			  buttons: [
-				{ 
-				  text: 'Ok',
-				  type: 'button-assertive'
-				},
-			  ]
-			})
-		}else{
-			$ionicLoading.show({template: '<ion-spinner icon="crescent"></ion-spinner>'});
-			var action = "edit_contact";
-			var data_parameters = "action="+action+"&msg_id="+$stateParams.msgid+"&name="+name+"&number="+number;
-			$http.post(globalurl,data_parameters, {
-				headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
-			})
-			.success(function(response) {
-				if(response[0].status == "Y"){
-					$ionicLoading.hide(); // loading hide
-					$rootScope.$emit("CallParentMethod_get_contact_list", {});
-					$ionicPopup.show({
-					  template: '',
-					  title: 'Contact updated successfully.',
-					  scope: $scope,
-					  buttons: [
-						{
-						  text: 'Ok',
-						  type: 'button-assertive'
-						},
-					  ]
-					})
-				}
-				else{
-					//$scope.getContactList();
-				}
-			});
-		}
-	};
-	
-})
-
-
-
-.controller('contactCtrl', function($scope) {
-	$scope.mapCreated = function(map) {
-		$scope.map = map;
-	};
-	
-	$scope.centerOnMe = function () {
-		console.log("Centering");
-		if (!$scope.map) {
-		  return;
-		}
-	
-		$scope.loading = $ionicLoading.show({
-		  content: 'Getting current location...',
-		  showBackdrop: false
-		});
-	
-		navigator.geolocation.getCurrentPosition(function (pos) {
-		  console.log('Got pos', pos);
-		  $scope.map.setCenter(new google.maps.LatLng(pos.coords.latitude, pos.coords.longitude));
-		  $scope.loading.hide();
-		}, function (error) {
-		  alert('Unable to get location: ' + error.message);
-		});
-	};
-})
-
-.controller('emailCtrl', function($scope,$state,$http,$ionicPopup) {
-	$scope.user = {
-			name : '',
-			email : '',
-			website : '',
-			comments : ''
-	};
-	
-	$scope.sendemail = function(user){
-		var name = user.name;
-		var email = user.email;
-		var website = user.website;
-		var comments = user.comments;
-		
-		var data_parameters = "cont_name="+name+ "&cont_mail="+email+ "&cont_url="+website+ "&cont_message="+comments;
-		$http.post("http://"+globalip+"/email.php",data_parameters, {
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
-		})
-		.success(function(response){
-			if(response[0].status == "Y"){
-				$ionicPopup.show({
-				  template: '',
-				  title: 'Email sent successfully.',
-				  scope: $scope,
-				  buttons: [
-					{
-					  text: 'Ok',
-					  type: 'button-assertive'
-					},
-				  ]
-				})
-			}
-		});
-	}
-})
-
-
-// Authentication controller
-// Put your login, register functions here
-.controller('AuthCtrl', function($scope,$ionicHistory,$rootScope,$http,$ionicPopup,$state, $timeout, ngFB, $ionicModal) {
-	$scope.user = {username: '',password : ''};
-    // hide back butotn in next view
-	$ionicHistory.nextViewOptions({
-      	disableBack: true
+    }, function(fail){
+      //fail get profile info
+      console.log('profile info fail', fail);
     });
-	
-	//login with facebook
-	$scope.fbLogin = function () {
-    	ngFB.login({scope: 'email,publish_actions'}).then(
-        function (response) {
-            if (response.status === 'connected') {
-                console.log('Facebook login succeeded');
-				$state.go('app.dashboard');
-                $scope.closeLogin();
-            } else {
-                alert('Facebook login failed');
-            }
-        });
-	};
-	
-	
-	
-	// below code is for accordian
-	
-	$scope.toggleGroup = function(group) {
-		if ($scope.isGroupShown(group)) {
-		  $scope.shownGroup = null;
-		} else {
-		  $scope.shownGroup = group;
-		}
-	};
-	$scope.isGroupShown = function(group) {
-		return $scope.shownGroup === group;
-	};
-	
-	
-	$scope.shownGroup1 = null;
-	
-	$scope.toggleGroup1 = function(group1) {
-		if ($scope.isGroupShown1(group1)) {
-		  $scope.shownGroup1 = null;
-		} else {
-		  $scope.shownGroup1 = group1;
-		}
-	};
-	$scope.isGroupShown1 = function(group1) {
-		return $scope.shownGroup1 === group1;
-	};
-	// above code is for accordian
-	
-	
-   	$scope.signIn = function(user) {
-		var username = user.username;
-		var password = user.password;
-		
-		
-		if(typeof username === "undefined" || typeof password === "undefined" || username == "" || password == ""){
-			$ionicPopup.show({
-			  template: '',
-			  title: 'Please fill all fields',
-			  scope: $scope,
-			  buttons: [
-				{ 
-				  text: 'Ok',
-				  type: 'button-assertive'
-				},
-			  ]
-			})
-		}
-		else{
-			var action = "login";
-			var data_parameters = "action="+action+"&username="+username+ "&password="+password;
-			$http.post(globalurl,data_parameters, {
-				headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
-			})
-			.success(function(response) {
-				if(response[0].status == "Y"){
-					$rootScope.$broadcast('login_var',{global_login:response[0].userid});
-					$state.go('app.dashboard');
-				}
-				else{
-					$ionicPopup.show({
-					  template: '',
-					  title: 'Username or password is wrong',
-					  scope: $scope,
-					  buttons: [
-						{
-						  text: 'Ok',
-						  type: 'button-assertive'
-						},
-					  ]
-					})
-				}
-			});
-		}
-	};
-	
-	
-	// for registration
-	$scope.register = function(user) {
-		var email = user.register_email;
-		var password = user.register_password;
-		var cpassword = user.register_cpassword;
-		var firstname = user.register_fname;
-		var lastname = user.register_lname;
-		var phone = user.register_phone;
-		
-		var filter = /^([a-zA-Z0-9_\.\-])+\@(([a-zA-Z\-])+\.)+([a-zA-Z]{2,4})+$/;
-		
-		if(typeof email === "undefined" || typeof password === "undefined" || email == "" || password == "" || typeof cpassword === "undefined" || cpassword == "" || typeof firstname === "undefined" || firstname == "" || phone == "" || phone == "undefined" || lastname == "" || lastname == "undefined" ){
-			$ionicPopup.show({
-			  template: '',
-			  title: 'Please fill all fields',
-			  scope: $scope,
-			  buttons: [
-				{ 
-				  text: 'Ok',
-				  type: 'button-assertive'
-				},
-			  ]
-			})
-		}
-		else
-		{
-			if(password != cpassword){
-				$ionicPopup.show({
-				  template: '',
-				  title: 'Password did not match',
-				  scope: $scope,
-				  buttons: [
-					{ 
-					  text: 'Ok',
-					  type: 'button-assertive'
-					},
-				  ]
-				})
-			}
-			else{
-				if(!filter.test(email)){
-					$ionicPopup.show({
-							  template: '',
-							  title: 'Please enter valid email',
-							  scope: $scope,
-							  buttons: [
-								{ 
-								  text: 'Ok',
-								  type: 'button-assertive'
-								},
-							  ]
-					})
-				}
-				else
+  };
+
+
+  //This is the fail callback from the login method
+  var fbLoginError = function(error){
+    console.log('fbLoginError', error);
+    $ionicLoading.hide();
+  };
+
+  //this method is to get the user profile info from the facebook api
+  var getFacebookProfileInfo = function (authResponse) {
+    var info = $q.defer();
+
+    facebookConnectPlugin.api('/me?fields=email,name&access_token=' + authResponse.accessToken, null,
+      function (response) {
+				console.log(response);
+        info.resolve(response);
+      },
+      function (response) {
+				console.log(response);
+        info.reject(response);
+      }
+    );
+    return info.promise;
+  };
+
+  //This method is executed when the user press the "Login with facebook" button
+  $scope.facebookSignIn = function() {
+
+    facebookConnectPlugin.getLoginStatus(function(success){
+     if(success.status === 'connected'){
+        // the user is logged in and has authenticated your app, and response.authResponse supplies
+        // the user's ID, a valid access token, a signed request, and the time the access token
+        // and signed request each expire
+        console.log('getLoginStatus', success.status);
+
+				//check if we have our user saved
+				var user = UserService.getUser('facebook');
+
+				if(!user.userID)
 				{
-					var action = "register";
-					var data_parameters = "action="+action+"&user_email="+email+ "&password="+password+ "&firstname="+firstname+ "&phone="+phone+ "&lastname="+lastname;
-					$http.post(globalurl,data_parameters, {
-						headers: {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
-					})
-					.success(function(response) {
-						if(response[0].status == "Y"){
-							$scope.user = {register_email: '',register_fname : '',register_lname : '',register_password : '',register_cpassword : '',register_phone : ''};
-							$ionicPopup.show({
-							  template: '',
-							  title: 'You have registered Successfully',
-							  scope: $scope,
-							  buttons: [
-								{
-								  text: 'Ok',
-								  type: 'button-assertive'
-								},
-							  ]
-							})
-						}
-						else if(response[0].status == "E"){
-							$ionicPopup.show({
-							  template: '',
-							  title: 'Email already exists',
-							  scope: $scope,
-							  buttons: [
-								{
-								  text: 'Ok',
-								  type: 'button-assertive'
-								},
-							  ]
-							})
-						}
-						else{
-							$ionicPopup.show({
-							  template: '',
-							  title: 'There is some server error',
-							  scope: $scope,
-							  buttons: [
-								{
-								  text: 'Ok',
-								  type: 'button-assertive'
-								},
-							  ]
-							})
-						}
+					getFacebookProfileInfo(success.authResponse)
+					.then(function(profileInfo) {
+
+						//for the purpose of this example I will store user data on local storage
+						UserService.setUser({
+							authResponse: success.authResponse,
+							userID: profileInfo.id,
+							name: profileInfo.name,
+							email: profileInfo.email,
+							picture : "http://graph.facebook.com/" + success.authResponse.userID + "/picture?type=large"
+						});
+
+						$state.go('app.home');
+
+					}, function(fail){
+						//fail get profile info
+						console.log('profile info fail', fail);
 					});
-				}
-			}
-		}
-	};
-	
-	//for forgot
-	$scope.forgot = function(user) {
-		var email = user.forgot_email;
-		
-		if(typeof email === "undefined" || email == ""){
-			$ionicPopup.show({
-			  template: '',
-			  title: 'Please enter email address.',
-			  scope: $scope,
-			  buttons: [
-				{
-				  text: 'Ok',
-				  type: 'button-assertive'
-				},
-			  ]
-			})
-		}
-		else{
-			var action = "forgot";
-			var data_parameters = "action="+action+"&user_email="+email;
-			$http.post(globalurl,data_parameters, {
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}
-			})
-			.success(function(response){
-				if(response[0].status == "N"){
-					$ionicPopup.show({
-					  template: '',
-					  title: 'Email address not registered.',
-					  scope: $scope,
-					  buttons: [
-						{
-						  text: 'Ok',
-						  type: 'button-assertive'
-						},
-					  ]
-					})
 				}else{
-					$scope.user = {forgot_email: ''};
-					$ionicPopup.show({
-					  template: '',
-					  title: 'An email has been sent to the email address.',
-					  scope: $scope,
-					  buttons: [
-						{
-						  text: 'Ok',
-						  type: 'button-assertive',
-						},
-					  ]
-					})
+					$state.go('app.home');
 				}
-			});
-		}
-	}
-});
+
+     } else {
+        //if (success.status === 'not_authorized') the user is logged in to Facebook, but has not authenticated your app
+        //else The person is not logged into Facebook, so we're not sure if they are logged into this app or not.
+        console.log('getLoginStatus', success.status);
+
+			  $ionicLoading.show({
+          template: 'Logging in...'
+        });
+
+        //ask the permissions you need. You can learn more about FB permissions here: https://developers.facebook.com/docs/facebook-login/permissions/v2.4
+        facebookConnectPlugin.login(['email', 'public_profile'], fbLoginSuccess, fbLoginError);
+      }
+    });
+  };
+})
+
+
+
+.controller('AppCtrl', function($scope){
+
+})
+
+.controller('HomeCtrl', function($scope, UserService, $ionicActionSheet, $state, $ionicLoading){
+
+	$scope.user = UserService.getUser();
+
+	$scope.showLogOutMenu = function() {
+		var hideSheet = $ionicActionSheet.show({
+			destructiveText: 'Logout',
+			titleText: 'Are you sure you want to logout? This app is awsome so I recommend you to stay.',
+			cancelText: 'Cancel',
+			cancel: function() {},
+			buttonClicked: function(index) {
+				return true;
+			},
+			destructiveButtonClicked: function(){
+				$ionicLoading.show({
+					template: 'Logging out...'
+				});
+
+        //facebook logout
+        facebookConnectPlugin.logout(function(){
+          $ionicLoading.hide();
+          $state.go('welcome');
+        },
+        function(fail){
+          $ionicLoading.hide();
+        });
+			}
+		});
+	};
+})
+
+;
